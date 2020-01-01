@@ -1,12 +1,12 @@
 #Loading all required libraries 
 # %pylab inline
-import cv2
+from cv2 import cv2
 import numpy as np 
 import pandas as pd
 import pytesseract
 import matplotlib.pyplot as plt
 import statistics
-pytesseract.pytesseract.tesseract_cmd = r'C:\Users\USER\AppData\Local\Tesseract-OCR\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 #function to sort contours by its x-axis (top to bottom)
 def sort_contours(cnts, method="left-to-right"):
@@ -39,6 +39,8 @@ img.shape
 
 # showing image
 imgplot = plt.imshow(cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
+cv2.imwrite('output/steps/imageinit.png',img)
+
 #plt.show()
 
 # for adding border to an image
@@ -48,13 +50,13 @@ img123 = img1.copy()
 # Thresholding the image
 (thresh, th3) = cv2.threshold(img1, 11, 255,cv2.THRESH_BINARY|cv2.THRESH_OTSU)
 imgplot = plt.imshow(cv2.resize(th3, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
-cv2.imwrite('output/image16.png',th3)
+cv2.imwrite('output/steps/image1.png',th3)
 #plt.show()
 
 # to flip image pixel values
 th3 = 255-th3
 imgplot = plt.imshow(cv2.resize(th3, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
-cv2.imwrite('output/image15.png',th3)
+cv2.imwrite('output/steps/image2.png',th3)
 #plt.show()
 
 # initialize kernels for table boundaries detections
@@ -94,14 +96,14 @@ else:
 img_temp1 = cv2.erode(th3, ver, iterations=3)
 verticle_lines_img = cv2.dilate(img_temp1, ver, iterations=3)
 imgplot = plt.imshow(cv2.resize(verticle_lines_img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
-cv2.imwrite('output/image14.png',verticle_lines_img)
+cv2.imwrite('output/steps/image3.png',verticle_lines_img)
 #plt.show()
 
 # to detect horizontal lines of table borders
 img_hor = cv2.erode(th3, hor, iterations=3)
 hor_lines_img = cv2.dilate(img_hor, hor, iterations=4)
 imgplot = plt.imshow(cv2.resize(hor_lines_img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
-cv2.imwrite('output/image13.png',hor_lines_img)
+cv2.imwrite('output/steps/image4.png',hor_lines_img)
 
 #plt.show()
 
@@ -109,36 +111,36 @@ cv2.imwrite('output/image13.png',hor_lines_img)
 # adding horizontal and vertical lines
 hor_ver = cv2.add(hor_lines_img,verticle_lines_img)
 imgplot = plt.imshow(cv2.resize(hor_ver, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
-cv2.imwrite('output/image12.png',hor_ver)
+cv2.imwrite('output/steps/image5.png',hor_ver)
 
 #plt.show()
 hor_ver = 255-hor_ver
 imgplot = plt.imshow(cv2.resize(hor_ver, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
-cv2.imwrite('output/image11.png',hor_ver)
+cv2.imwrite('output/steps/image6.png',hor_ver)
 #plt.show()
 
 # subtracting table borders from image
 temp = cv2.subtract(th3,hor_ver)
 imgplot = plt.imshow(cv2.resize(temp, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
-cv2.imwrite('output/image10.png',temp)
+cv2.imwrite('output/steps/image7.png',temp)
 #plt.show()
 temp = 255-temp
 imgplot = plt.imshow(cv2.resize(temp, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
-cv2.imwrite('output/image9.png',temp)
+cv2.imwrite('output/steps/image8.png',temp)
 #plt.show()
 
 #Doing xor operation for erasing table boundaries
 tt = cv2.bitwise_xor(img1,temp)
 imgplot = plt.imshow(cv2.resize(tt, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
-cv2.imwrite('output/image8.png',tt)
+cv2.imwrite('output/steps/image9.png',tt)
 #plt.show()
 iii = cv2.bitwise_not(tt)
 imgplot = plt.imshow(cv2.resize(iii, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
-cv2.imwrite('output/image7.png',iii)
+cv2.imwrite('output/steps/image10.png',iii)
 #plt.show()
 tt1=iii.copy()
 imgplot = plt.imshow(cv2.resize(tt1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
-cv2.imwrite('output/image6.png',tt1)
+cv2.imwrite('output/steps/image11.png',tt1)
 #plt.show()
 
 #kernel initialization
@@ -158,18 +160,18 @@ hor1 = np.array([[1,1,1,1,1,1,1,1,1,1],
 temp1 = cv2.erode(tt1, ver1, iterations=1)
 verticle_lines_img1 = cv2.dilate(temp1, ver1, iterations=1)
 imgplot = plt.imshow(cv2.resize(verticle_lines_img1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
-cv2.imwrite('output/image5.png',verticle_lines_img1)
+cv2.imwrite('output/steps/image12.png',verticle_lines_img1)
 #plt.show()
 temp12 = cv2.erode(tt1, hor1, iterations=1)
 hor_lines_img2 = cv2.dilate(temp12, hor1, iterations=1)
 imgplot = plt.imshow(cv2.resize(hor_lines_img2, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
-cv2.imwrite('output/image4.png',hor_lines_img2)
+cv2.imwrite('output/steps/image13.png',hor_lines_img2)
 #plt.show()
 
 # doing or operation for detecting only text part and removing rest all
 hor_ver = cv2.add(hor_lines_img2,verticle_lines_img1)
 imgplot = plt.imshow(cv2.resize(hor_ver, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
-cv2.imwrite('output/image3.png',hor_ver)
+cv2.imwrite('output/steps/image14.png',hor_ver)
 #plt.show()
 dim1 = (hor_ver.shape[1],hor_ver.shape[0])
 dim = (hor_ver.shape[1]*2,hor_ver.shape[0]*2)
@@ -180,7 +182,7 @@ resized = cv2.resize(hor_ver, dim, interpolation = cv2.INTER_AREA)
 #bitwise not operation for fliping the pixel values so as to apply morphological operation such as dilation and erode
 want = cv2.bitwise_not(resized)
 imgplot = plt.imshow(cv2.resize(want, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
-cv2.imwrite('output/image2.png',want)
+cv2.imwrite('output/steps/image15.png',want)
 # plt.show()
 
 if(want.shape[0]<1000):
@@ -197,7 +199,7 @@ else:
                         [1,1,1,1,1]])
 tt1 = cv2.dilate(want,kernel1,iterations=12)
 imgplot = plt.imshow(cv2.resize(tt1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
-cv2.imwrite('output/image1.png',tt1)
+cv2.imwrite('output/steps/image16.png',tt1)
 # plt.show()
 
 # getting image back to its original size
@@ -235,7 +237,7 @@ for i in range(len(cnts)):
     # to show image
 imgplot = plt.imshow(cv2.resize(image, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),cmap='gray')
 #plt.show()
-cv2.imwrite('output/imagefinal.jpg',image)
+cv2.imwrite('output/steps/imagefinal.jpg',image)
 #rearranging all the bounding boxes horizontal wise where every box fall on same horizontal line 
 main=[]
 j=0
