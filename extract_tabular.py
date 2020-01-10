@@ -6,8 +6,8 @@ import pytesseract
 import statistics
 
 # config and variables
-input = 'input/example4.png' # <---------- change input here
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+input = 'input/example1.jpg' # <---------- change input here
+pytesseract.pytesseract.tesseract_cmd = r'C:\Users\USER\AppData\Local\Tesseract-OCR\tesseract.exe'
 
 # function to sort contours by its x-axis (top to bottom)
 def sort_contours(cnts, method="left-to-right"):
@@ -40,7 +40,8 @@ img1= cv2.copyMakeBorder(img,50,50,50,50,cv2.BORDER_CONSTANT,value=[255,255])
 cv2.imwrite('output/steps/init.png',img1)
 
 # Thresholding the image
-(thresh, th3) = cv2.threshold(img1, 11, 255,cv2.THRESH_BINARY|cv2.THRESH_OTSU)
+img = cv2.GaussianBlur(img,(5,5),0)
+(thresh, th3) = cv2.threshold(img1, 128, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 cv2.resize(th3, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
 cv2.imwrite('output/steps/1.png',th3)
 
@@ -82,6 +83,8 @@ else:
                [1]])
     hor = np.array([[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]])
 
+# A kernel of (3 X 3) ones.
+defaultKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5,5))
 # to detect vertical lines of table borders
 img_temp1 = cv2.erode(th3, ver, iterations=3)
 verticle_lines_img = cv2.dilate(img_temp1, ver, iterations=3)
@@ -94,8 +97,15 @@ hor_lines_img = cv2.dilate(img_hor, hor, iterations=4)
 cv2.resize(hor_lines_img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
 cv2.imwrite('output/steps/4.png',hor_lines_img)
 
+# Weighting parameters, this will decide the quantity of an image to be added to make a new image.
+# alpha = 0.5
+# beta = 1.0 - alpha
+
 # adding horizontal and vertical lines
-hor_ver = cv2.add(hor_lines_img,verticle_lines_img)
+hor_ver = cv2.add(hor_lines_img, verticle_lines_img)
+hor_ver = cv2.erode(~hor_ver, defaultKernel, iterations=1)
+
+# (thresh, hor_ver) = cv2.threshold(hor_ver, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 cv2.resize(hor_ver, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
 cv2.imwrite('output/steps/5.png',hor_ver)
 hor_ver = 255-hor_ver
@@ -103,23 +113,24 @@ cv2.resize(hor_ver, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
 cv2.imwrite('output/steps/6.png',hor_ver)
 
 # subtracting table borders from image
-temp = cv2.subtract(th3,hor_ver)
-cv2.resize(temp, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-cv2.imwrite('output/steps/7.png',temp)
-temp = 255-temp
-cv2.resize(temp, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-cv2.imwrite('output/steps/8.png',temp)
-
-#Doing xor operation for erasing table boundaries
-tt = cv2.bitwise_xor(img1,temp)
+tt = cv2.subtract(th3,hor_ver)
 cv2.resize(tt, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-cv2.imwrite('output/steps/9.png',tt)
+cv2.imwrite('output/steps/7.png',tt)
 iii = cv2.bitwise_not(tt)
 cv2.resize(iii, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-cv2.imwrite('output/steps/10.png',iii)
-tt1=iii.copy()
+tt1 = iii.copy()
 cv2.resize(tt1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-cv2.imwrite('output/steps/11.png',tt1)
+cv2.imwrite('output/steps/8.png',iii)
+
+#Doing xor operation for erasing table boundaries
+# tt = cv2.bitwise_xor(img1,temp)
+# cv2.resize(tt, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+# cv2.imwrite('output/steps/9.png',tt)
+# iii = cv2.bitwise_not(tt)
+# cv2.resize(iii, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+# cv2.imwrite('output/steps/10.png',iii)
+# tt1=iii.copy()
+# cv2.resize(tt1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
 
 #kernel initialization
 ver1 = np.array([[1,1],
@@ -138,16 +149,16 @@ hor1 = np.array([[1,1,1,1,1,1,1,1,1,1],
 temp1 = cv2.erode(tt1, ver1, iterations=1)
 verticle_lines_img1 = cv2.dilate(temp1, ver1, iterations=1)
 cv2.resize(verticle_lines_img1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-cv2.imwrite('output/steps/12.png',verticle_lines_img1)
+cv2.imwrite('output/steps/11.png',verticle_lines_img1)
 temp12 = cv2.erode(tt1, hor1, iterations=1)
 hor_lines_img2 = cv2.dilate(temp12, hor1, iterations=1)
 cv2.resize(hor_lines_img2, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-cv2.imwrite('output/steps/13.png',hor_lines_img2)
+cv2.imwrite('output/steps/12.png',hor_lines_img2)
 
 # doing or operation for detecting only text part and removing rest all
 hor_ver = cv2.add(hor_lines_img2,verticle_lines_img1)
 cv2.resize(hor_ver, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-cv2.imwrite('output/steps/14.png',hor_ver)
+cv2.imwrite('output/steps/13.png',hor_ver)
 
 dim1 = (hor_ver.shape[1],hor_ver.shape[0])
 dim = (hor_ver.shape[1]*2,hor_ver.shape[0]*2)
@@ -158,24 +169,27 @@ resized = cv2.resize(hor_ver, dim, interpolation = cv2.INTER_AREA)
 #bitwise not operation for fliping the pixel values so as to apply morphological operation such as dilation and erode
 want = cv2.bitwise_not(resized)
 cv2.resize(want, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-cv2.imwrite('output/steps/15.png',want)
+cv2.imwrite('output/steps/14.png',want)
 
 
 if(want.shape[0]<1000):
     kernel1 = np.array([[1,1,1]])
-    kernel2 = np.array([[1,1],
-                        [1,1]])
-    kernel3 = np.array([[1,0,1],[0,1,0],
-                       [1,0,1]])
+    kernel2 = np.array([[1],
+                        [1],
+                        [1]])
 else:
     kernel1 = np.array([[1,1,1,1,1,1]])
-    kernel2 = np.array([[1,1,1,1,1],
-                        [1,1,1,1,1],
-                        [1,1,1,1,1],
-                        [1,1,1,1,1]])
-tt1 = cv2.dilate(want,kernel1,iterations=10)
+    kernel2 = np.array([[1],
+                        [1],
+                        [1],
+                        [1],
+                        [1],
+                        [1]])
+
+tt1 = cv2.dilate(want,kernel1,iterations=30) # iterations need to be change depending on the picture
+tt1 = cv2.dilate(tt1,kernel2,iterations=15) # iterations need to be change depending on the picture
 cv2.resize(tt1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-cv2.imwrite('output/steps/16.png',tt1)
+cv2.imwrite('output/steps/15.png',tt1)
 
 
 # getting image back to its original size
@@ -207,7 +221,7 @@ imag = iii.copy()
 for i in range(len(cnts)):    
     cnt = cnts[i]
     x,y,w,h = cv2.boundingRect(cnt)
-    if(h>=.7*medianheight and w/h > 0.9):
+    if(h>=.6*medianheight and w/h > 0.9):
         image = cv2.rectangle(imag,(x+4,y-2),(x+w-5,y+h),(0,255,0),1)
         box.append([x,y,w,h])
     # to show image
@@ -355,7 +369,7 @@ for i in range(len(finallist)):
                 
                 out = pytesseract.image_to_string(img)
                 if(len(out)==0):
-                    out = pytesseract.image_to_string(img,config='')
+                    out = pytesseract.image_to_string(img,config='--psm 10 --oem 1')
             
                 to_out = to_out +" "+out
                 
