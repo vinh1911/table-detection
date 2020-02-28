@@ -32,27 +32,27 @@ def sort_contours(cnts, method="left-to-right"):
 
 def main(input):
     # loading image form directory
-    img = cv2.imread(input,cv2.IMREAD_GRAYSCALE)
-    img.shape
+    img_original = cv2.imread(input,cv2.IMREAD_GRAYSCALE)
+    img_original.shape
 
     # for adding border to an image
-    cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    img1= cv2.copyMakeBorder(img,50,50,50,50,cv2.BORDER_CONSTANT,value=[255,255])
-    cv2.imwrite('output/steps/init.png',img1)
+    cv2.resize(img_original, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    img_initial= cv2.copyMakeBorder(img_original,50,50,50,50,cv2.BORDER_CONSTANT,value=[255,255])
+    cv2.imwrite('output/steps/init.png',img_initial)
 
     # Thresholding the image
-    img = cv2.GaussianBlur(img,(5,5),0)
-    (thresh, th3) = cv2.threshold(img1, 128, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    cv2.resize(th3, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    cv2.imwrite('output/steps/1.png',th3)
+    img_original = cv2.GaussianBlur(img_original,(5,5),0)
+    (thresh, img_thresholded) = cv2.threshold(img_initial, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+    cv2.resize(img_thresholded, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    cv2.imwrite('output/steps/1.png',img_thresholded)
 
     # to flip image pixel values
-    th3 = 255-th3
-    cv2.resize(th3, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    cv2.imwrite('output/steps/2.png',th3)
+    img_thresholded_inverted = 255-img_thresholded
+    cv2.resize(img_thresholded_inverted, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    cv2.imwrite('output/steps/2.png',img_thresholded_inverted)
 
     # initialize kernels for table boundaries detections
-    if(th3.shape[0]<1000):
+    if(img_thresholded_inverted.shape[0]<1000):
         ver = np.array([[1],
                 [1],
                 [1],
@@ -85,26 +85,24 @@ def main(input):
         hor = np.array([[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]])
 
     # A kernel of (3 X 3) ones.
-    defaultKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5,5))
+    # defaultKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5,5))
+
     # to detect vertical lines of table borders
-    img_temp1 = cv2.erode(th3, ver, iterations=3)
-    verticle_lines_img = cv2.dilate(img_temp1, ver, iterations=3)
-    cv2.resize(verticle_lines_img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    cv2.imwrite('output/steps/3.png',verticle_lines_img)
+    img_ver = cv2.erode(img_thresholded_inverted, ver, iterations=3)
+    ver_lines_img = cv2.dilate(img_ver, ver, iterations=3)
+    cv2.resize(ver_lines_img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    cv2.imwrite('output/steps/3.png',ver_lines_img)
 
     # to detect horizontal lines of table borders
-    img_hor = cv2.erode(th3, hor, iterations=3)
+    img_hor = cv2.erode(img_thresholded_inverted, hor, iterations=3)
     hor_lines_img = cv2.dilate(img_hor, hor, iterations=4)
     cv2.resize(hor_lines_img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
     cv2.imwrite('output/steps/4.png',hor_lines_img)
 
-    # Weighting parameters, this will decide the quantity of an image to be added to make a new image.
-    # alpha = 0.5
-    # beta = 1.0 - alpha
 
     # adding horizontal and vertical lines
-    hor_ver = cv2.add(hor_lines_img, verticle_lines_img)
-    hor_ver = cv2.erode(~hor_ver, defaultKernel, iterations=1)
+    hor_ver = cv2.add(hor_lines_img, ver_lines_img)
+    # hor_ver = cv2.erode(~hor_ver, defaultKernel, iterations=1)
 
     # (thresh, hor_ver) = cv2.threshold(hor_ver, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
     cv2.resize(hor_ver, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
@@ -114,24 +112,23 @@ def main(input):
     cv2.imwrite('output/steps/6.png',hor_ver)
 
     # subtracting table borders from image
-    tt = cv2.subtract(th3,hor_ver)
-    cv2.resize(tt, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    cv2.imwrite('output/steps/7.png',tt)
-    iii = cv2.bitwise_not(tt)
-    cv2.resize(iii, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    tt1 = iii.copy()
-    cv2.resize(tt1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    cv2.imwrite('output/steps/8.png',iii)
+    borders_subtracted = cv2.subtract(img_thresholded_inverted,hor_ver)
+    cv2.resize(borders_subtracted, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    cv2.imwrite('output/steps/7.png',borders_subtracted)
+    borders_subtracted = 255 - borders_subtracted 
+    cv2.resize(borders_subtracted, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    cv2.imwrite('output/steps/8.png',borders_subtracted)
+
 
     #Doing xor operation for erasing table boundaries
-    # tt = cv2.bitwise_xor(img1,temp)
-    # cv2.resize(tt, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    # cv2.imwrite('output/steps/9.png',tt)
-    # iii = cv2.bitwise_not(tt)
-    # cv2.resize(iii, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    # cv2.imwrite('output/steps/10.png',iii)
-    # tt1=iii.copy()
-    # cv2.resize(tt1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    img_borders_removed_inverted = cv2.bitwise_xor(img_thresholded,borders_subtracted)
+    cv2.resize(img_borders_removed_inverted, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    cv2.imwrite('output/steps/9.png',img_borders_removed_inverted)
+    img_borders_removed = cv2.bitwise_not(img_borders_removed_inverted)
+    cv2.resize(img_borders_removed, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    cv2.imwrite('output/steps/10.png',img_borders_removed)
+    img_borders_removed_1=img_borders_removed.copy()
+    cv2.resize(img_borders_removed_1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
 
     #kernel initialization
     ver1 = np.array([[1,1],
@@ -147,17 +144,18 @@ def main(input):
                 [1,1,1,1,1,1,1,1,1,1]])
 
     #morphological operation
-    temp1 = cv2.erode(tt1, ver1, iterations=1)
-    verticle_lines_img1 = cv2.dilate(temp1, ver1, iterations=1)
-    cv2.resize(verticle_lines_img1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    cv2.imwrite('output/steps/11.png',verticle_lines_img1)
-    temp12 = cv2.erode(tt1, hor1, iterations=1)
-    hor_lines_img2 = cv2.dilate(temp12, hor1, iterations=1)
+    temp1 = cv2.erode(img_borders_removed_1, ver1, iterations=1)
+    ver_lines_img1 = cv2.dilate(temp1, ver1, iterations=1)
+    cv2.resize(ver_lines_img1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    cv2.imwrite('output/steps/11.png',ver_lines_img1)
+
+    temp2 = cv2.erode(img_borders_removed_1, hor1, iterations=1)
+    hor_lines_img2 = cv2.dilate(temp2, hor1, iterations=1)
     cv2.resize(hor_lines_img2, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
     cv2.imwrite('output/steps/12.png',hor_lines_img2)
 
     # doing or operation for detecting only text part and removing rest all
-    hor_ver = cv2.add(hor_lines_img2,verticle_lines_img1)
+    hor_ver = cv2.add(hor_lines_img2,ver_lines_img1)
     cv2.resize(hor_ver, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
     cv2.imwrite('output/steps/13.png',hor_ver)
 
@@ -187,14 +185,13 @@ def main(input):
                             [1],
                             [1]])
 
-    tt1 = cv2.dilate(want,kernel1,iterations=30) # iterations need to be change depending on the picture
-    tt1 = cv2.dilate(tt1,kernel2,iterations=15) # iterations need to be change depending on the picture
-    cv2.resize(tt1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    cv2.imwrite('output/steps/15.png',tt1)
-
-
+    img_borders_removed_1 = cv2.dilate(want,kernel1,iterations=5) # iterations need to be change depending on the picture
+    img_borders_removed_1 = cv2.dilate(img_borders_removed_1,kernel2,iterations=5) # iterations need to be change depending on the picture
+    cv2.resize(img_borders_removed_1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+   
     # getting image back to its original size
-    resized1 = cv2.resize(tt1, dim1, interpolation = cv2.INTER_AREA)
+    resized1 = cv2.resize(img_borders_removed_1, dim1, interpolation = cv2.INTER_AREA)
+    cv2.imwrite('output/steps/15.png',resized1)
 
     # Find contours for image, which will detect all the boxes
     contours1, hierarchy1 = cv2.findContours(resized1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -218,12 +215,12 @@ def main(input):
         medianheight = statistics.mean(heightlist[-sportion:-2])
     #keeping bounding box which are having height more then 70% of the mean height and deleting all those value where ratio of width to height is less then 0.9
     box =[]
-    imag = iii.copy()
+    img_temp = img_borders_removed.copy()
     for i in range(len(cnts)):    
         cnt = cnts[i]
         x,y,w,h = cv2.boundingRect(cnt)
-        if(h>=.6*medianheight and w/h > 0.9):
-            image = cv2.rectangle(imag,(x+4,y-2),(x+w-5,y+h),(0,255,0),1)
+        if(h>=.7*medianheight and w/h > 0.9):
+            image = cv2.rectangle(img_temp,(x+4,y-2),(x+w-5,y+h),(0,255,0),1)
             box.append([x,y,w,h])
         # to show image
     cv2.resize(image, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
@@ -349,6 +346,7 @@ def main(input):
 
     #extration of the text from the box using pytesseract and storing the values in their respective row and column
     todump=[]
+    count=1
     for i in range(len(finallist)):
         for j in range(len(finallist[i])):
             to_out=''
@@ -360,14 +358,16 @@ def main(input):
                 for k in range(len(finallist[i][j])):                
                     y,x,w,h = finallist[i][j][k][0],finallist[i][j][k][1],finallist[i][j][k][2],finallist[i][j][k][3]
 
-                    roi = iii[x:x+h, y+2:y+w]
+                    roi = img_initial[x:x+h, y+2:y+w] #change which image the to be cropped here
                     roi1= cv2.copyMakeBorder(roi,5,5,5,5,cv2.BORDER_CONSTANT,value=[255,255])
                     img = cv2.resize(roi1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
                     kernel = np.ones((2, 1), np.uint8)
                     img = cv2.dilate(img, kernel, iterations=1)
                     img = cv2.erode(img, kernel, iterations=2)
                     img = cv2.dilate(img, kernel, iterations=1)
-                    
+                    # output cropped img
+                    # cv2.imwrite('output/cropped/'+str(count)+'.png',img)
+                    count+=1
                     out = pytesseract.image_to_string(img)
                     if(len(out)==0):
                         out = pytesseract.image_to_string(img,config='--psm 10 --oem 1')
