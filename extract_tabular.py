@@ -84,31 +84,38 @@ def main(input):
                 [1]])
         hor = np.array([[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]])
 
-    # A kernel of (3 X 3) ones.
-    # defaultKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5,5))
-
     # to detect vertical lines of table borders
-    img_ver = cv2.erode(img_thresholded_inverted, ver, iterations=3)
-    ver_lines_img = cv2.dilate(img_ver, ver, iterations=3)
+    img_ver = cv2.erode(img_thresholded_inverted, ver, iterations=5)
+    ver_lines_img = cv2.dilate(img_ver, ver, iterations=5)
     cv2.resize(ver_lines_img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
     cv2.imwrite('output/steps/3.png',ver_lines_img)
 
     # to detect horizontal lines of table borders
-    img_hor = cv2.erode(img_thresholded_inverted, hor, iterations=3)
-    hor_lines_img = cv2.dilate(img_hor, hor, iterations=4)
+    img_hor = cv2.erode(img_thresholded_inverted, hor, iterations=5)
+    hor_lines_img = cv2.dilate(img_hor, hor, iterations=5)
     cv2.resize(hor_lines_img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
     cv2.imwrite('output/steps/4.png',hor_lines_img)
 
 
     # adding horizontal and vertical lines
-    hor_ver = cv2.add(hor_lines_img, ver_lines_img)
-    # hor_ver = cv2.erode(~hor_ver, defaultKernel, iterations=1)
+    
+    ## old adding code
+    # hor_ver = cv2.add(hor_lines_img, ver_lines_img)
+    # cv2.resize(hor_ver, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    # cv2.imwrite('output/steps/5.png',hor_ver)
+    # hor_ver = 255-hor_ver
+    # cv2.resize(hor_ver, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    # cv2.imwrite('output/steps/6.png',hor_ver)
+    ## 
 
-    # (thresh, hor_ver) = cv2.threshold(hor_ver, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    cv2.resize(hor_ver, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    cv2.imwrite('output/steps/5.png',hor_ver)
-    hor_ver = 255-hor_ver
-    cv2.resize(hor_ver, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    # Weighting parameters, this will decide the quantity of an image to be added to make a new image.
+    alpha = 0.5
+    beta = 1.0 - alpha
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    # This function helps to add two image with specific weight parameter to get a third image as summation of two image.
+    hor_ver = cv2.addWeighted(ver_lines_img, alpha, hor_lines_img, beta, 0.0)
+    hor_ver = cv2.erode(~hor_ver, kernel, iterations=2)
+    (thresh, hor_ver) = cv2.threshold(hor_ver, 128,255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
     cv2.imwrite('output/steps/6.png',hor_ver)
 
     # subtracting table borders from image
@@ -185,8 +192,8 @@ def main(input):
                             [1],
                             [1]])
 
-    img_borders_removed_1 = cv2.dilate(want,kernel1,iterations=5) # iterations need to be change depending on the picture
-    img_borders_removed_1 = cv2.dilate(img_borders_removed_1,kernel2,iterations=5) # iterations need to be change depending on the picture
+    img_borders_removed_1 = cv2.dilate(want,kernel1,iterations=27) # iterations need to be change depending on the picture
+    img_borders_removed_1 = cv2.dilate(img_borders_removed_1,kernel2,iterations=10) # iterations need to be change depending on the picture
     cv2.resize(img_borders_removed_1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
    
     # getting image back to its original size
@@ -219,7 +226,7 @@ def main(input):
     for i in range(len(cnts)):    
         cnt = cnts[i]
         x,y,w,h = cv2.boundingRect(cnt)
-        if(h>=.7*medianheight and w/h > 0.9):
+        if(h>=.5*medianheight and w/h > 0.9):
             image = cv2.rectangle(img_temp,(x+4,y-2),(x+w-5,y+h),(0,255,0),1)
             box.append([x,y,w,h])
         # to show image
@@ -358,7 +365,7 @@ def main(input):
                 for k in range(len(finallist[i][j])):                
                     y,x,w,h = finallist[i][j][k][0],finallist[i][j][k][1],finallist[i][j][k][2],finallist[i][j][k][3]
 
-                    roi = img_initial[x:x+h, y+2:y+w] #change which image the to be cropped here
+                    roi = img_borders_removed[x:x+h, y+2:y+w] #change which image the to be cropped here
                     roi1= cv2.copyMakeBorder(roi,5,5,5,5,cv2.BORDER_CONSTANT,value=[255,255])
                     img = cv2.resize(roi1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
                     kernel = np.ones((2, 1), np.uint8)

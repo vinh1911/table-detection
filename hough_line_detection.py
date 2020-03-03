@@ -8,12 +8,12 @@ import cv2 as cv
 import numpy as np
 def main(argv):
     
-    default_file = 'input/example1.jpg'
+    default_file = 'input/example4.png'
     filename = argv[0] if len(argv) > 0 else default_file
     # Loads an image
     src = cv.imread(cv.samples.findFile(filename), cv.IMREAD_GRAYSCALE)
     src = cv.GaussianBlur(src,(1,1),0)
-    (thresh, src) = cv.threshold(src, 128, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+    (thresh, src) = cv.threshold(src, 128, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
     # Check if image is loaded fine
     if src is None:
         print ('Error opening image!')
