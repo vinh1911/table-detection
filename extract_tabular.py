@@ -7,7 +7,7 @@ import statistics
 
 # config and variables
 source = 'input/example1.jpg' # <---------- change input here
-pytesseract.pytesseract.tesseract_cmd = r'C:\Users\USER\AppData\Local\Tesseract-OCR\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 # function to sort contours by its x-axis (top to bottom)
 def sort_contours(cnts, method="left-to-right"):
@@ -193,7 +193,7 @@ def main(input):
                             [1]])
 
     img_borders_removed_1 = cv2.dilate(want,kernel1,iterations=27) # iterations need to be change depending on the picture
-    img_borders_removed_1 = cv2.dilate(img_borders_removed_1,kernel2,iterations=10) # iterations need to be change depending on the picture
+    img_borders_removed_1 = cv2.dilate(img_borders_removed_1,kernel2,iterations=0) # iterations need to be change depending on the picture
     cv2.resize(img_borders_removed_1, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
    
     # getting image back to its original size
