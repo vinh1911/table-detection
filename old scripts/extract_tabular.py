@@ -7,7 +7,7 @@ import statistics
 
 # config and variables
 source = 'input/example1.jpg' # <---------- change input here
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = r'C:/Program Files/Tesseract-OCR/tesseract.exe'
 
 # function to sort contours by its x-axis (top to bottom)
 def sort_contours(cnts, method="left-to-right"):

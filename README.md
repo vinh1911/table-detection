@@ -5,13 +5,9 @@ Remember the installation path and replace "pytesseract.pytesseract.tesseract_cm
 
 example: pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
+main.py is the main logical script
+
+app.py is for server stuff
+
 # Dependencies
-Use "pip install [name]" to install dependencies
-
-opencv-python
-
-openpyxl
-
-pytesseract
-
-jinja2
+Use "pip install -r requirements.txt" to install dependencies
