@@ -1,31 +1,9 @@
 import numpy as np
 import cv2
 import pandas as pd
-import pytesseract
+import utils
 import json
-pytesseract.pytesseract.tesseract_cmd = '/app/.apt/usr/bin/tesseract'
 
-# Load image
-source = cv2.imread('input/example4.jpg')
-
-def sort_contours(cnts, method="left-to-right"):
-    # initialize the reverse flag and sort index
-    reverse = False
-    i = 0
-    # handle if we need to sort in reverse
-    if method == "right-to-left" or method == "bottom-to-top":
-        reverse = True
-    # handle if we are sorting against the y-coordinate rather than
-    # the x-coordinate of the bounding box
-    if method == "top-to-bottom" or method == "bottom-to-top":
-        i = 1
-    # construct the list of bounding boxes and sort them from top to
-    # bottom
-    boundingBoxes = [cv2.boundingRect(c) for c in cnts]
-    (cnts, boundingBoxes) = zip(*sorted(zip(cnts, boundingBoxes),
-    key=lambda b:b[1][i], reverse=reverse))
-    # return the list of sorted contours and bounding boxes
-    return (cnts, boundingBoxes)
 
 def ocr(img):
     # Convert resized RGB image to grayscale
@@ -69,7 +47,7 @@ def ocr(img):
     contours, hierarchy = cv2.findContours(img_vh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     # Sort all the contours by top to bottom.
-    contours, boundingBoxes = sort_contours(contours, method="top-to-bottom")
+    contours, boundingBoxes = utils.sort_contours(contours, method="top-to-bottom")
 
     #Creating a list of heights for all detected boxes
     heights = [boundingBoxes[i][3] for i in range(len(boundingBoxes))]
@@ -159,19 +137,8 @@ def ocr(img):
                     finalimg = img_th[x+padding:x+h-padding, y+padding:y+w-padding]
                     border = cv2.copyMakeBorder(finalimg,2,2,2,2, cv2.BORDER_CONSTANT,value=[255,255])
                     resizing = cv2.resize(border, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-                    # cv2.imshow('hihi',resizing)
-                    # cv2.waitKey(0)
-                    # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 1))
-                    # dilation = cv2.dilate(resizing, kernel,iterations=1)
-                    # erosion = cv2.erode(dilation, kernel,iterations=2)
-                    if (i == 0):
-                        out = pytesseract.image_to_string(resizing,lang='vie')
-                    elif(i > 0 and j == 0):
-                        out = pytesseract.image_to_string(resizing, config='-c tessedit_char_whitelist=0123456789/')
-                    else:
-                        out = pytesseract.image_to_string(resizing, config='-c tessedit_char_whitelist=0123456789.')
-                    # if(len(out)==0):
-                    #     out = pytesseract.image_to_string(erosion, config='--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789')
+                    if (i != 0 ):
+                        out = utils.predict_number(resizing)
                     inner = inner +" "+ out
                 outer.append(inner)
 
@@ -184,5 +151,5 @@ def ocr(img):
     data = json.loads(d)
     return data
 
-if __name__ == '__main__':
-    ocr(source)
+# if __name__ == '__main__':
+#     ocr(source)

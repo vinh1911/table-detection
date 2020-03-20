@@ -6,6 +6,7 @@ import base64
 # Initialize the Flask application
 app = Flask(__name__)
 
+
 # route http posts to this method
 @app.route('/ocr', methods=['POST'])
 def ocr():
@@ -39,4 +40,4 @@ def ocr():
 
 if __name__ == '__main__':
     # start flask app
-    app.run(threaded=True, port=5000)
+    app.run(threaded=True)
