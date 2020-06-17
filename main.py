@@ -4,17 +4,29 @@ import pandas as pd
 import utils
 import json
 
-
 def ocr(img):
+    qrDecoder = cv2.QRCodeDetector()
+
+    # Detect and decode the qrcode
+    data,bbox,_ = qrDecoder.detectAndDecode(img)
+    if len(data)>0:
+        user = data.split(',')
+        user_id = user[0]
+        user_name = user[1]
+        user_birthdate = user[2]
+    else:
+        user_id = 'QRCode not found'
+        user_name = user_id
+        user_birthdate = user_id
     # Convert resized RGB image to grayscale
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
     # Apply gaussianblur
     img_blur = cv2.GaussianBlur(img_gray, (5, 5), 0)
-
     # Threshold the image
     img_th = cv2.adaptiveThreshold(img_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 199, 5)
-
+    if bbox is not None:
+        x, y, w, h = cv2.boundingRect(bbox)
+        img_th = cv2.rectangle(img_th,(x-10,y-10),(x+w+10,y+h+10), (255,255,255), -1)
     #inverting the image 
     img_bin = 255-img_th
 
@@ -41,7 +53,6 @@ def ocr(img):
     img_vh = cv2.erode(~img_vh, kernel, iterations=2)
     thresh, img_vh = cv2.threshold(img_vh,128,255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
     bitxor = cv2.bitwise_xor(img_gray,img_vh)
-    bitnot = cv2.bitwise_not(bitxor)
 
     # Detect contours for following box detection
     contours, hierarchy = cv2.findContours(img_vh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -62,7 +73,7 @@ def ocr(img):
     # The value in this case is to to neglect bounding box which might be no cells (e.g. the table it self)
     for c in contours:
         x, y, w, h = cv2.boundingRect(c)
-        if (40<w<1000 and 20<h<500): # this could vary depending on the size of the image
+        if (160<w<1000 and 80<h<500): # this could vary depending on the size of the image
             # image = cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
             box.append([x,y,w,h])
 
@@ -127,7 +138,6 @@ def ocr(img):
     outer=[]
     for i in range(1,len(finalboxes)):
         for j in range(len(finalboxes[i])):
-            inner=''
             if(len(finalboxes[i][j])==0):
                 outer.append(' ')
             else:
@@ -137,19 +147,19 @@ def ocr(img):
                     finalimg = img_th[x+padding:x+h-padding, y+padding:y+w-padding]
                     border = cv2.copyMakeBorder(finalimg,2,2,2,2, cv2.BORDER_CONSTANT,value=[255,255])
                     resizing = cv2.resize(border, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-                    if (i != 0 ):
+                    if (i != 0):
                         out = utils.predict_number(resizing)
-                    inner = inner +" "+ out
-                outer.append(inner)
+                outer.append(out) 
 
     #Creating a dataframe of the generated OCR list
     arr = np.array(outer)
-    tag = ['date','beforeBreakfast','afterBreakfast','beforeLunch','afterLunch','beforeDinner','afterDinner']
+    tag = ['day','month','year','beforeBreakfast','afterBreakfast','beforeLunch','afterLunch','beforeDinner','afterDinner']
     df = pd.DataFrame(arr.reshape(len(row)-1, countcol),columns = tag)
+    df['date']= df['day']+'/'+ df['month']+'/'+df['year']
     df.insert(0,'count',df.index)
     d = df.to_json(orient='records')
-    data = json.loads(d)
-    return data
+    user_data= json.loads(d)
+    return user_id,user_name,user_birthdate,user_data
 
 # if __name__ == '__main__':
-#     ocr(source)
+#     print(ocr(source))

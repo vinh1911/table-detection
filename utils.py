@@ -2,17 +2,66 @@ import cv2
 from keras.models import load_model
 import tensorflow as tf
 import numpy as np
-
-# model = load_model('mnist_keras.h5')
-# model._make_predict_function()
+from scipy import ndimage
+import math
 
 graph = tf.Graph()
 with graph.as_default():
     session = tf.Session()
     with session.as_default():
-        model = load_model('mnist_keras_cnn_model.h5')
+        model = load_model('mnist_keras_995.h5')
 
-kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3,3))
+kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (1,10))
+
+def getBestShift(img):
+    cy,cx = ndimage.measurements.center_of_mass(img)
+
+    rows,cols = img.shape
+    shiftx = np.round(cols/2.0-cx).astype(int)
+    shifty = np.round(rows/2.0-cy).astype(int)
+
+    return shiftx,shifty
+
+def shift(img,sx,sy):
+    rows,cols = img.shape
+    M = np.float32([[1,0,sx],[0,1,sy]])
+    shifted = cv2.warpAffine(img,M,(cols,rows))
+    return shifted
+
+def process_digit(img):
+    gray = img
+    while np.sum(gray[0]) == 0:
+        gray = gray[1:]
+
+    while np.sum(gray[:,0]) == 0:
+        gray = np.delete(gray,0,1)
+
+    while np.sum(gray[-1]) == 0:
+        gray = gray[:-1]
+
+    while np.sum(gray[:,-1]) == 0:
+        gray = np.delete(gray,-1,1)
+
+    rows,cols = gray.shape
+
+    if rows > cols:
+        factor = 20.0/rows
+        rows = 20
+        cols = int(round(cols*factor))
+        gray = cv2.resize(gray, (cols,rows))
+    else:
+        factor = 20.0/cols
+        cols = 20
+        rows = int(round(rows*factor))
+        gray = cv2.resize(gray, (cols, rows))
+
+    colsPadding = (int(math.ceil((28-cols)/2.0)),int(math.floor((28-cols)/2.0)))
+    rowsPadding = (int(math.ceil((28-rows)/2.0)),int(math.floor((28-rows)/2.0)))
+    gray = np.lib.pad(gray,(rowsPadding,colsPadding),'constant')
+    shiftx,shifty = getBestShift(gray)
+    shifted = shift(gray,shiftx,shifty)
+    gray = shifted
+    return gray
 
 def sort_contours(cnts, method="left-to-right"):
     # initialize the reverse flag and sort index
@@ -34,30 +83,29 @@ def sort_contours(cnts, method="left-to-right"):
 
 def predict_number(img):
     
-    im_th = 255 - img
-    im_th = cv2.dilate(im_th, kernel, iterations=3)
+    img_invert = 255 - img
+    im_th = cv2.dilate(img_invert, kernel, iterations=1)
+
     # Find contours in the image
-    contours,hierarchy = cv2.findContours(im_th.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours,hierarchy = cv2.findContours(im_th.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     # sort contours
     contours, boundingBoxes = sort_contours(contours)
     digits = ''
+ 
     for rect in contours:
-
         # Draw the rectangles
         x,y,w,h = cv2.boundingRect(rect)
-
-        #this could vary depending on the image you are trying to predict
-        #trying to extract ONLY the rectangles with the digit in it
-        #ex: there could be a bounding box inside every 6,9,8 because of the circle in the number's shape - you don't want that.
-        #read more about it here: https://docs.opencv.org/trunk/d9/d8b/tutorial_py_contours_hierarchy.html
-
-        if (25 <= w <= 200) and (35 <= h <= 200):
-            roi = im_th[y:y+h,x:x+w]
-            roi = cv2.resize(roi,(28, 28))
-            if roi.size > 0:
-                roi = roi.reshape((1, 28, 28, 1)).astype('float32')
-                with graph.as_default():
-                    with session.as_default():
-                        nbr = model.predict_classes(roi)
-                digits += str(nbr[0])
+        if 2 < w < 40:
+            digits += '.'
+        elif w >= 40 :
+            roi = img_invert[y:y+h,x:x+w]
+            # cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),1)
+            roi = process_digit(roi)
+            roi = roi.reshape((1, 28, 28, 1)).astype('float32')
+            with graph.as_default():
+                with session.as_default():
+                    nbr = model.predict_classes(roi)
+            digits += str(nbr[0])
+        # cv2.imshow('hihi',img)
+        # cv2.waitKey(0)
     return digits
